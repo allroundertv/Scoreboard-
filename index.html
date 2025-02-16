@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Cricket Scoreboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .scoreboard-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 10px;
+            scroll-behavior: smooth;
+            scroll-snap-type: x mandatory;
+            white-space: nowrap;
+        }
+
+        .score-box {
+            flex: 0 0 auto;
+            width: 220px;
+            min-height: 110px;
+            background: #222;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            border: 2px solid gold;
+            text-align: left;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .match-info {
+            font-size: 11px;
+            font-weight: bold;
+            color: gold;
+            text-align: center;
+            margin-bottom: 4px;
+            white-space: normal;
+        }
+
+        .teams {
+            font-size: 11px;
+            font-weight: bold;
+            background: #333;
+            padding: 5px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+        }
+
+        .team {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            white-space: nowrap;
+        }
+
+        .status {
+            font-size: 10px;
+            font-weight: bold;
+            color: #00ffea;
+            text-align: left;
+            margin-top: 4px;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        #no-match {
+            font-size: 14px;
+            color: red;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🏏 Live Cricket Scoreboard</h2>
+    <div class="scoreboard-container" id="scoreboard-container">
+        <div id="no-match">Fetching live matches...</div>
+    </div>
+
+    <script>
+        const apiKey = "662e261e23msh1eb64e5aa9b1394p19eb33jsn4b8ff0f1b722"; // Replace with your actual API key
+        const apiUrl = `https://cricbuzz-cricket.p.rapidapi.com/matches/v1/live`;
+
+        async function fetchLiveScores() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "GET",
+                    headers: {
+                        "X-RapidAPI-Key": apiKey,
+                        "X-RapidAPI-Host": "cricbuzz-cricket.p.rapidapi.com"
+                    }
+                });
+
+                const data = await response.json();
+                const container = document.getElementById("scoreboard-container");
+                container.innerHTML = "";
+
+                if (data && data.typeMatches) {
+                    let liveMatches = [];
+
+                    data.typeMatches.forEach(typeMatch => {
+                        if (typeMatch.seriesMatches) {
+                            typeMatch.seriesMatches.forEach(series => {
+                                if (series.seriesAdWrapper && series.seriesAdWrapper.matches) {
+                                    liveMatches.push(...series.seriesAdWrapper.matches);
+                                }
+                            });
+                        }
+                    });
+
+                    if (liveMatches.length > 0) {
+                        liveMatches.forEach(match => {
+                            let team1 = match.matchInfo.team1.teamName;
+                            let team2 = match.matchInfo.team2.teamName;
+                            let status = match.matchInfo.status;
+                            
+                            // Extracting tour name instead of match description
+                            let tourName = match.matchInfo.seriesName || "Unknown Tour";
+                            
+                            // Extracting scores
+                            let team1Score = "N/A";
+                            let team2Score = "N/A";
+
+                            if (match.matchScore && match.matchScore.team1Score) {
+                                let t1 = match.matchScore.team1Score;
+                                team1Score = `${t1.inngs1?.runs || 0}/${t1.inngs1?.wickets || 0} (${t1.inngs1?.overs || 0} ov)`;
+                            }
+
+                            if (match.matchScore && match.matchScore.team2Score) {
+                                let t2 = match.matchScore.team2Score;
+                                team2Score = `${t2.inngs1?.runs || 0}/${t2.inngs1?.wickets || 0} (${t2.inngs1?.overs || 0} ov)`;
+                            }
+
+                            let matchBox = document.createElement("div");
+                            matchBox.classList.add("score-box");
+                            matchBox.innerHTML = `
+                                <div class="match-info">${tourName}</div>
+                                <div class="teams">
+                                    <div class="team"><span>${team1}</span> <span>${team1Score}</span></div>
+                                    <div class="team"><span>${team2}</span> <span>${team2Score}</span></div>
+                                </div>
+                                <p class="status">${status}</p>
+                            `;
+                            container.appendChild(matchBox);
+                        });
+                    } else {
+                        container.innerHTML = `<div id="no-match">No live matches available.</div>`;
+                    }
+                } else {
+                    container.innerHTML = `<div id="no-match">No live matches available.</div>`;
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById("scoreboard-container").innerHTML = `<div id="no-match">Error fetching data!</div>`;
+            }
+        }
+
+        fetchLiveScores();
+        setInterval(fetchLiveScores, 30000);
+    </script>
+
+</body>
+</html>
